@@ -1,19 +1,357 @@
-<!-- index.html -->
 <!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8">
-    <title>Docs Upload</title>
-  </head>
-  <body>
-    <h1>Upload a Document</h1>
-    <form
-      action="/upload"
-      method="POST"
-      enctype="multipart/form-data"
-    >
-      <input type="file" name="file" multiple required>
-      <button type="submit">Upload</button>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Layout</title>
+  <style>
+    body * {
+      margin: 0px;
+      padding: 0px;
+      box-sizing: border-box;
+    }
+    body {
+      display: flex;
+      height: 100vh;
+      width: 100vw;
+      margin: 0;
+      padding: 0;
+      font-family: monospace;
+    }
+    h2 {
+      padding: 10px 0;
+      text-align: center;
+    }
+    ul {
+      list-style: none;
+    }
+    aside {
+      background: #0002;
+    }
+    main {
+      flex-grow: 1;
+    }
+    section {
+      padding: 10px;
+    }
+
+    #preview {
+      width: 640px;
+    }
+
+    #sidebar {
+      width: 320px;
+    }
+
+    #search {
+      display: flex;
+      padding: 8px;
+      gap: 10px;
+      background: #0002;
+      border-radius: 8px;
+    }
+    #search > label {
+      flex-grow: 1;
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      background: #fffb;
+      border-radius: 4px;
+      padding-left: 8px;
+    }
+    #search > label:focus-within {
+      outline: 2px solid #0d6efd;
+    }
+    #search > label > svg {
+      color: #0008;
+    }
+    #search > #upload > svg {
+      color: white;
+    }
+    #search > label:focus-within > svg {
+      color: #0d6efd;
+    }
+    #search > label > input[type=file] {
+      display: none;
+    }
+    #search > label > input {
+      padding: 10px 10px 10px 0;
+      width: 100%;
+      background: transparent;
+      border: none;
+      outline: none;
+    }
+    #search > #upload:focus {
+      outline: 2px solid black;
+      border: 2px solid white;
+    }
+    #search > #upload {
+      flex-grow: 0;
+      display: flex;
+      padding: 0px 10px 0px 2px;
+      border-radius: 4px;
+      border: 2px solid transparent;
+      background: #0d6efd;
+      color: white;
+      font-weight: 900;
+    }
+
+  </style>
+</head>
+<template id="result-item-template">
+  <style>
+    article {
+      height: 120px;
+      width: 120px;
+      background-position: center;
+      background-size: 100%;
+      color: white;
+      border: 1px solid #888;
+      border-radius: 6px;
+      outline: 3px solid #71717170;
+      outline-offset: -3px;
+    }
+  </style>
+  <li>
+    <article>
+      <div>
+        <a></a>
+        <time></time>
+      </div>
+    </article>
+  </li>
+</template>
+<body>
+<script type="module">
+//import { effect, effectScope, signal, computed } from 'npm:alien-signals'
+import { effect, effectScope, signal, computed } from 'https://esm.sh/alien-signals'
+
+const debounce = (delay, initialValue) => {
+  let timeout
+  const debounced = signal(initialValue)
+  return (...args) => {
+    if (!args.length) return debounced()
+    clearTimeout(timeout)
+    timeout = setTimeout(debounced, delay, args[0])
+  }
+}
+
+const params = new URLSearchParams(location.search)
+const query = debounce(500, params.get('q') || '')
+const activeDoc = signal(params.get('doc'))
+const searchPending = signal(true)
+const uploadPending = signal(false)
+
+// Search config
+const attributesToRetrieve =
+  ['sha', 'mime', 'type', 'size', 'uploadedAt', 'title', 'name']
+const MAX = 50
+const searchConfig = {
+  page: 1,
+  hitsPerPage: MAX,
+  attributesToHighlight: ['title', 'name'], // check to do the higlight witht he new css
+  attributesToRetrieve,
+  attributesToSearchOn: [
+    // 'mime',
+    'title',
+    'name',
+    'type',
+    'summary',
+    'purpose',
+    'tags',
+    'entities',
+    'dates', // TODO check if search match a date, if so search here only ?
+  ],
+  facets: [],
+  sort: ['uploadedAt:desc'],
+}
+
+const matches = Array(MAX).keys().map(() => signal(undefined)).toArray()
+const RESULTS = Array(MAX).keys().map(index => {
+  const match = matches[index]
+  const obj = {}
+  for (const key of attributesToRetrieve) {
+    const get = () => match()?.[key]
+    Object.defineProperty(obj, key, { enumerable: true, get })
+  }
+  return obj
+}).toArray()
+
+const updateResults = async (signal) => {
+  searchPending(true)
+  try {
+    const q = query()
+    const res = await fetch('/search', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      signal,
+      body: JSON.stringify(q ? { q, ...searchConfig } : searchConfig),
+    })
+    const { hits, message: errorMessage, ...rest } = await res.json()
+    if (!res.ok) throw Object.assign(Error(errorMessage), rest)
+    let i = -1
+    while (++i < MAX) {
+      const hit = hits[i]
+      const match = matches[i]
+      if (hit) {
+        match()?.sha === hit.sha  || match(hit)
+      } else {
+        match(undefined)
+      }
+    }
+  } finally {
+    searchPending(false)
+  }
+}
+
+// Check if we want to do this
+let controller
+effect(() => {
+  controller?.abort()
+  controller = new AbortController()
+  updateResults(controller.signal).catch(console.error)
+})
+
+const resultItemTemplate = document.getElementById('result-item-template').content
+class SearchResultItem extends HTMLElement {
+  constructor() {
+    super()
+    const shadow = this.attachShadow({ mode: 'open' })
+    shadow.appendChild(resultItemTemplate.cloneNode(true))
+    const id = this.getAttribute('id')
+    this.index = Number(id.split('-').at(-1))
+  }
+
+  connectedCallback() {
+    const elem = this.shadowRoot.querySelector('article')
+    const link = this.shadowRoot.querySelector('a')
+    const time = this.shadowRoot.querySelector('time')
+    effect(() => {
+      const { sha, title, uploadedAt } = RESULTS[this.index]
+      this.dataset.sha = sha || ''
+      if (!sha) return
+      console.log({ sha, title, uploadedAt })
+      elem.style.backgroundImage = `linear-gradient(transparent 70%, #717171d1 90%), url(/preview/${sha})`
+      link.href = `?select=${sha}`
+      elem.alt = title
+      link.textContent = title
+      const date = new Date(uploadedAt * 1000)
+      time.dateTime = date
+      time.textContent = date.toLocaleDateString()
+    })
+  }
+}
+
+customElements.define('result-item', SearchResultItem)
+
+const fileInput = document.querySelector('#upload > input[type=file]')
+fileInput.addEventListener('input', async () => {
+  const body = new FormData()
+  if (!fileInput.files.length) return
+  for (const file of fileInput.files) body.append('files', file)
+  uploadPending(true)
+  try {
+    const response = await fetch('/upload', { method: 'POST', body })
+    return response.json()
+  } finally {
+    uploadPending(false)
+  }
+})
+
+effect(() => {
+  const p = new URLSearchParams(location.search)
+  p.set('q', query())
+  history.replaceState(null, '', `${location.pathname}?${p}${location.hash}`)
+})
+
+const searchInput = document.querySelector('#search input[type=search]')
+searchInput.addEventListener('input', () => query(searchInput.value), { capture: false })
+
+</script>
+<aside id="sidebar">
+  <section>
+    <h2>Sidebar</h2>
+  </section>
+</aside>
+<main>
+  <section>
+    <form id="search">
+      <label>
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="m21 21-4.34-4.34"/>
+          <circle cx="11" cy="11" r="8"/>
+        </svg>
+        <input type="search" placeholder="Search documents..." tabindex="1" >
+      </label>
+      <label id="upload" tabindex="2">
+        <input type="file"></input>
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2">
+          <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" />
+          <path d="M14 2v4a2 2 0 0 0 2 2h4M12 12v6M15 15l-3-3-3 3" />
+        </svg>
+        <span>Add files</span>
+      </label>
     </form>
-  </body>
+  </section>
+  <section id="results">
+    <ul>
+      <result-item id="result-0"/>
+      <result-item id="result-1"/>
+      <result-item id="result-2"/>
+      <result-item id="result-3"/>
+      <result-item id="result-4"/>
+      <result-item id="result-5"/>
+      <result-item id="result-6"/>
+      <result-item id="result-7"/>
+      <result-item id="result-8"/>
+      <result-item id="result-9"/>
+      <result-item id="result-10"/>
+      <result-item id="result-11"/>
+      <result-item id="result-12"/>
+      <result-item id="result-13"/>
+      <result-item id="result-14"/>
+      <result-item id="result-15"/>
+      <result-item id="result-16"/>
+      <result-item id="result-17"/>
+      <result-item id="result-18"/>
+      <result-item id="result-19"/>
+      <result-item id="result-20"/>
+      <result-item id="result-21"/>
+      <result-item id="result-22"/>
+      <result-item id="result-23"/>
+      <result-item id="result-24"/>
+      <result-item id="result-25"/>
+      <result-item id="result-26"/>
+      <result-item id="result-27"/>
+      <result-item id="result-28"/>
+      <result-item id="result-29"/>
+      <result-item id="result-30"/>
+      <result-item id="result-31"/>
+      <result-item id="result-32"/>
+      <result-item id="result-33"/>
+      <result-item id="result-34"/>
+      <result-item id="result-35"/>
+      <result-item id="result-36"/>
+      <result-item id="result-37"/>
+      <result-item id="result-38"/>
+      <result-item id="result-39"/>
+      <result-item id="result-40"/>
+      <result-item id="result-41"/>
+      <result-item id="result-42"/>
+      <result-item id="result-43"/>
+      <result-item id="result-44"/>
+      <result-item id="result-45"/>
+      <result-item id="result-46"/>
+      <result-item id="result-47"/>
+      <result-item id="result-48"/>
+      <result-item id="result-49"/>
+    </ul>
+  </section>
+</main>
+<aside id="preview">
+  <section>
+  <h2>Preview</h2>
+  </section>
+</aside>
+</body>
 </html>

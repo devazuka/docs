@@ -50,15 +50,15 @@ const gemini = async (body: string, attempt = 0) => {
 }
 
 export const analize = async (doc: DocFacts) => {
-  const { sha, name, type } = doc
+  const { sha, name, mime } = doc
   const fileNamePrompt =
-    `The original filename is "${name}" with mime type "${type}". This filename may hint the document's content and type.`
+    `The original filename is "${name}" with mime type "${mime}". This filename may hint the document's content and type.`
 
-  let mime_type = type
+  let mime_type = mime
   let buff: Buffer | Uint8Array = await Deno.readFile(
     `doc/${sha.slice(0, 2)}/${sha.slice(2)}`,
   )
-  if (type.startsWith('image/')) {
+  if (mime.startsWith('image/')) {
     mime_type = 'image/avif'
     buff = await sharp(buff)
       .resize({ height: 960, withoutEnlargement: true })

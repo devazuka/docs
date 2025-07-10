@@ -60,7 +60,7 @@ const startDocProcesses = async (sha: string) => {
 const handleUpload = async (req: Request) => {
   const formData = await req.formData()
   const validFiles: File[] = []
-  for (const file of formData.getAll('file')) {
+  for (const file of formData.getAll('files')) {
     if (!(file instanceof File)) return new Response(null, { status: 400 })
     const supportedType = file.type.startsWith('image/') ||
       file.type.startsWith('text/') ||
