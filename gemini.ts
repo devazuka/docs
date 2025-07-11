@@ -1,7 +1,6 @@
 import { encodeBase64 } from 'jsr:@std/encoding/base64'
 import sharp from 'npm:sharp'
 import { DocAnalysis, DocFacts } from './types.ts'
-import type { Buffer } from 'node:buffer'
 
 const TOKEN = Deno.env.get('GEMINI_TOKEN')
 
@@ -55,14 +54,14 @@ export const analize = async (doc: DocFacts) => {
     `The original filename is "${name}" with mime type "${mime}". This filename may hint the document's content and type.`
 
   let mime_type = mime
-  let buff: Buffer | Uint8Array = await Deno.readFile(
+  let buff = await Deno.readFile(
     `doc/${sha.slice(0, 2)}/${sha.slice(2)}`,
   )
   if (mime.startsWith('image/')) {
-    mime_type = 'image/avif'
+    mime_type = 'image/webp'
     buff = await sharp(buff)
       .resize({ height: 960, withoutEnlargement: true })
-      .avif()
+      .webp()
       .toBuffer()
   }
 
@@ -92,7 +91,7 @@ export const analize = async (doc: DocFacts) => {
   }))
 
   if (output.error) {
-    for (const detail of output.error.details) {
+    for (const detail of (output.error.details || [])) {
       console.error(detail)
     }
     throw Error(output.error.message)

@@ -116,10 +116,14 @@ const handleUpload = async (req: Request) => {
   })
 }
 
+const activeDocs = new Map<string, Doc>()
 const openDoc = async (sha: string) => {
+  const activeDoc = activeDocs.get(sha)
+  if (activeDoc) return activeDoc
   const path = `doc/${sha.slice(0, 2)}/${sha.slice(2)}`
   const doc = JSON.parse(await Deno.readTextFile(`${path}.json`))
   Object.defineProperty(doc, 'path', { get: () => path })
+  activeDocs.set(sha, doc)
   return doc as Doc
 }
 
@@ -139,6 +143,7 @@ const handlers: Record<
     if (!sha) return new Response(null, { status: 400 })
     const doc = await openDoc(sha)
     if (!doc.preview) return new Response(null, { status: 404 })
+    console.log(`${doc.path}_preview`)
     const body = await Deno.open(`${doc.path}_preview`)
     const date = new Date()
     date.setFullYear(date.getFullYear() + 1)

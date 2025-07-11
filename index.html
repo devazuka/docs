@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Layout</title>
   <style>
+    @import url('https://fonts.googleapis.com/css2?family=Oswald:wght@200..700&display=swap');
+
     body * {
       margin: 0px;
       padding: 0px;
@@ -96,27 +98,68 @@
       font-weight: 900;
     }
 
+    #results ul {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+      gap: 16px;
+      padding: 16px;
+    }
   </style>
 </head>
 <template id="result-item-template">
   <style>
+    :host { display: block }
     article {
       height: 120px;
       width: 120px;
       background-position: center;
-      background-size: 100%;
+      background-size: cover;
       color: white;
-      border: 1px solid #888;
-      border-radius: 6px;
-      outline: 3px solid #71717170;
-      outline-offset: -3px;
+      border: 1px solid #555;
+      border-radius: 8px;
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+      transition: all 0.2s ease-in-out;
+    }
+    article:hover {
+      box-shadow: 0 2px 5px rgba(0,0,0,0.2), 0 4px 10px rgba(0,0,0,0.3);
+    }
+    div {
+      background: linear-gradient(transparent 0%, rgba(0, 0, 0, 0.31) 40%);
+      padding: 2px;
+      width: 100%;
+    }
+    a {
+      font-weight: bold;
+      font-size: 0.9em;
+      color: #fff;
+      text-decoration: none;
+      text-shadow: 1px 1px 3px rgba(0,0,0,0.7);
+      display: block;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+
+      font-family: "Oswald", sans-serif;
+      font-optical-sizing: auto;
+      font-weight: 370;
+      font-style: normal;
+    }
+    time {
+      font-size: 0.75em;
+      color: #fff;
+      text-shadow: 1px 1px 2px #000;
     }
   </style>
   <li>
     <article>
       <div>
-        <a></a>
         <time></time>
+        <a></a>
       </div>
     </article>
   </li>
