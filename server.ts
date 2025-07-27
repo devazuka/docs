@@ -86,7 +86,14 @@ const handleUpload = async (req: Request) => {
     await Deno.mkdir(dir, { recursive: true })
     try {
       const json = await Deno.readTextFile(`${path}.json`)
-      return JSON.parse(json)
+      const doc = JSON.parse(json) as Doc
+      if (doc.deleted) {
+        doc.deleted = false
+        await saveDocMeta(doc)
+        addDocument(doc)
+        startDocProcesses(sha)
+      }
+      return doc
     } catch (err) {
       if (!(err instanceof Deno.errors.NotFound)) {
         console.error('unable to read file data', err)
@@ -190,7 +197,7 @@ const handlers: Record<
 export default {
   async fetch(req: Request) {
     // TODO: handle basic auth instead basic IP lock
-    if (req.headers.get('cf-connecting-ip') !== "2001:8a0:6d01:6f00:18e0:156c:1b7e:2fb1") {
+    if (!req.headers.get('cf-connecting-ip').startsWith("2001:8a0:6d01:6f00:")) {
       return new Response(null, { status: 403 })
     }
     const url = new URL(req.url, 'http://localhost')

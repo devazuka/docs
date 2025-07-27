@@ -98,6 +98,16 @@
       font-weight: 900;
     }
 
+    #search > #upload[data-status='uploading'] {
+      animation: fade 1s ease-in-out infinite alternate;
+      cursor: wait;
+    }
+
+    @keyframes fade {
+      from { opacity: 1; }
+      to { opacity: 0.5; }
+    }
+
     #results ul {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
@@ -425,6 +435,17 @@ effect(() => {
 const searchInput = document.querySelector('#search input[type=search]')
 searchInput.addEventListener('input', () => query(searchInput.value), { capture: false })
 
+const uploadButton = document.querySelector('#upload')
+effect(() => {
+  if (uploadPending()) {
+    uploadButton.dataset.status = 'uploading'
+    uploadButton.disabled = true
+  } else {
+    uploadButton.dataset.status = 'ready'
+    uploadButton.disabled = false
+  }
+})
+
 </script>
 <aside id="sidebar">
   <section>
@@ -439,10 +460,10 @@ searchInput.addEventListener('input', () => query(searchInput.value), { capture:
           <path d="m21 21-4.34-4.34"/>
           <circle cx="11" cy="11" r="8"/>
         </svg>
-        <input type="search" placeholder="Search documents..." tabindex="1" >
+        <input type="search" placeholder="Search documents..." tabindex="1" disabled >
       </label>
       <label id="upload" tabindex="2">
-        <input type="file"></input>
+        <input type="file" multiple></input>
         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2">
           <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" />
           <path d="M14 2v4a2 2 0 0 0 2 2h4M12 12v6M15 15l-3-3-3 3" />
