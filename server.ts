@@ -179,6 +179,11 @@ const handlers: Record<
     await del
     return new Response(null, { status: 204 })
   },
+  POST_preview: async (_, sha) => {
+    if (!sha) return new Response(null, { status: 400 })
+    await processDoc('preview', sha)
+    return new Response(null, { status: 204 })
+  },
   GET_doc: async (_, sha) => {
     if (!sha) return new Response(null, { status: 400 })
     const doc = await openDoc(sha)
