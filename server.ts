@@ -19,9 +19,9 @@ const saveDocMeta = async (doc: Doc) => {
 
 const actions = { optimize, preview, analize } as const
 type ProcessActions = keyof typeof actions
-const processDoc = async (action: ProcessActions, sha: string) => {
+const processDoc = async (action: ProcessActions, sha: string, force?: boolean) => {
   const doc = await openDoc(sha)
-  if (action in doc) return
+  if (!force && action in doc) return
   // TODO: notify start
   const interval = setInterval(() => {
     // TODO: notify progress
@@ -181,7 +181,7 @@ const handlers: Record<
   },
   POST_preview: async (_, sha) => {
     if (!sha) return new Response(null, { status: 400 })
-    await processDoc('preview', sha)
+    await processDoc('preview', sha, true)
     return new Response(null, { status: 204 })
   },
   GET_doc: async (_, sha) => {
