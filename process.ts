@@ -17,7 +17,9 @@ const generateSVGPreview = (text: string) =>
 
 export const preview = async (doc: DocFacts) => {
   let buff: Uint8Array
-  if (doc.mime === 'application/pdf') {
+  if (doc.mime.startsWith('image/')) {
+    buff = await Deno.readFile(doc.path)
+  } else if (doc.mime === 'application/pdf') {
     await poppler.pdfToCairo(doc.path, doc.path, pdfOpts)
     // TODO: make a more robust way to find the proper file instead of expecting `-01.png`
     buff = await Deno.readFile(`${doc.path}-01.png`)
