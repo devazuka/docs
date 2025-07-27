@@ -73,6 +73,7 @@ const handleUpload = async (req: Request) => {
     }
     validFiles.push(file)
   }
+  const uploadedAt = Math.floor(Date.now() / 1000)
   const files = await Promise.all(validFiles.map(async (uploadedFile) => {
     const [stream, hashStream] = uploadedFile.stream().tee()
     const tmpPath = await Deno.makeTempFile()
@@ -97,7 +98,7 @@ const handleUpload = async (req: Request) => {
       mime: uploadedFile.type,
       size: uploadedFile.size,
       name: uploadedFile.name,
-      uploadedAt: Math.floor(Date.now() / 1000),
+      uploadedAt,
       get path() {
         return path
       },
@@ -189,6 +190,8 @@ const handlers: Record<
 export default {
   async fetch(req: Request) {
     // TODO: handle basic auth
+    console.log(req.headers)
+    // allow only: 85.240.183.72
     const url = new URL(req.url, 'http://localhost')
     const [, action, sha] = url.pathname.split('/', 3)
     if (sha && !/^[a-f0-9]{64}$/.test(sha)) {

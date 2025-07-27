@@ -19,8 +19,9 @@ export const preview = async (doc: DocFacts) => {
   let buff: Uint8Array
   if (doc.mime === 'application/pdf') {
     await poppler.pdfToCairo(doc.path, doc.path, pdfOpts)
-    buff = await Deno.readFile(`${doc.path}-1.png`)
-    await Deno.remove(`${doc.path}-1.png`)
+    // TODO: make a more robust way to find the proper file instead of expecting `-01.png`
+    buff = await Deno.readFile(`${doc.path}-01.png`)
+    await Deno.remove(`${doc.path}-01.png`)
   } else if (doc.mime.startsWith('text/')) {
     const textContent = await Deno.readTextFile(doc.path)
     buff = generateSVGPreview(textContent)
