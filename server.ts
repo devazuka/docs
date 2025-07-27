@@ -189,9 +189,10 @@ const handlers: Record<
 
 export default {
   async fetch(req: Request) {
-    // TODO: handle basic auth
-    console.log(req.headers)
-    // allow only: 85.240.183.72
+    // TODO: handle basic auth instead basic IP lock
+    if (req.headers.get('cf-connecting-ip') !== "2001:8a0:6d01:6f00:18e0:156c:1b7e:2fb1") {
+      return new Response(null, { status: 403 })
+    }
     const url = new URL(req.url, 'http://localhost')
     const [, action, sha] = url.pathname.split('/', 3)
     if (sha && !/^[a-f0-9]{64}$/.test(sha)) {
