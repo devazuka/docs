@@ -37,6 +37,7 @@ const processDoc = async (action: ProcessActions, sha: string, force?: boolean) 
     // TODO: notify action success
   } catch (err) {
     // TODO: notify action failed
+    Object.assign(err, { action })
     throw err
   } finally {
     clearInterval(interval)
@@ -46,11 +47,15 @@ const processDoc = async (action: ProcessActions, sha: string, force?: boolean) 
 const startDocProcesses = async (sha: string) => {
   console.log({ sha })
   try {
-    await Promise.all([
+    const results = await Promise.allSettled([
       processDoc('optimize', sha),
       processDoc('analize', sha),
       processDoc('preview', sha),
     ])
+    for (const result of results) {
+      if (result.status !== 'rejected') continue
+      console.log(`Process for ${sha} failed:`, result.reason)
+    }
     localStorage.removeItem(`new:${sha}`)
   } catch (err) {
     console.error('Unable to process document', err)
