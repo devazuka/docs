@@ -35,7 +35,7 @@ const geminiAPIUrl =
 let prev = Promise.resolve(undefined as any)
 const gemini = async (body: string, attempt = 0) => {
   await prev
-  console.log('asking gemini...', { attempt, body })
+  console.log('asking gemini...', { attempt })
   const pending = fetch(geminiAPIUrl, { method: 'POST', body })
   prev = prev.then(() =>
     pending.then(async (res) => {
@@ -54,15 +54,14 @@ export const analize = async (doc: DocFacts) => {
     `The original filename is "${name}" with mime type "${mime}". This filename may hint the document's content and type.`
 
   let mime_type = mime
-  let buff = await Deno.readFile(
-    `doc/${sha.slice(0, 2)}/${sha.slice(2)}`,
-  )
+  const path = `doc/${sha.slice(0, 2)}/${sha.slice(2)}`
+  let buff = await Deno.readFile(path)
   if (mime.startsWith('image/')) {
     mime_type = 'image/webp'
     buff = await sharp(buff)
       .resize({ height: 960, withoutEnlargement: true })
       .webp()
-      .toBuffer()
+      .toBuffer() as unknown as Uint8Array<ArrayBuffer>
   }
 
   const parts = [
@@ -89,6 +88,7 @@ export const analize = async (doc: DocFacts) => {
       { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_NONE' },
     ],
   }))
+  console.timeEnd(`${sha}:${name} gemini data`)
 
   if (output.error) {
     for (const detail of (output.error.details || [])) {
@@ -101,7 +101,6 @@ export const analize = async (doc: DocFacts) => {
   ) as DocAnalysis
   analysis.analize = true
 
-  console.timeEnd(`${sha}:${name} gemini data`)
 
   return analysis
 }
