@@ -151,7 +151,6 @@ const handlers: Record<
     if (!sha) return new Response(null, { status: 400 })
     const doc = await openDoc(sha)
     if (!doc.preview) return new Response(null, { status: 404 })
-    console.log(`${doc.path}_preview`)
     const body = await Deno.open(`${doc.path}_preview`)
     const date = new Date()
     date.setFullYear(date.getFullYear() + 1)
@@ -162,6 +161,11 @@ const handlers: Record<
         'expire': expire(),
       },
     })
+  },
+  POST_preview: async (_, sha) => {
+    if (!sha) return new Response(null, { status: 400 })
+    await processDoc('preview', sha, true)
+    return new Response(null, { status: 204 })
   },
   GET_meta: async (_, sha) => {
     if (!sha) return new Response(null, { status: 400 })
@@ -177,11 +181,6 @@ const handlers: Record<
     doc.deleted = true
     await saveDocMeta(doc)
     await del
-    return new Response(null, { status: 204 })
-  },
-  POST_preview: async (_, sha) => {
-    if (!sha) return new Response(null, { status: 400 })
-    await processDoc('preview', sha, true)
     return new Response(null, { status: 204 })
   },
   GET_doc: async (_, sha) => {
@@ -202,7 +201,8 @@ const handlers: Record<
 export default {
   async fetch(req: Request) {
     // TODO: handle basic auth instead basic IP lock
-    if (!req.headers.get('cf-connecting-ip').startsWith("2001:8a0:6d01:6f00:")) {
+    const ip = req.headers.get('cf-connecting-ip') || ''
+    if (ip !== '85.240.183.72' && !ip.startsWith("2001:8a0:6d01:6f00:")) {
       return new Response(null, { status: 403 })
     }
     const url = new URL(req.url, 'http://localhost')
